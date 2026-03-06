@@ -1,69 +1,60 @@
-.PHONY: help build test clean install
+ifeq ($(OS),Windows_NT)
+	EXE := .exe
+	# PowerShell é mais consistente no Windows do que comandos CMD
+	MKDIR := powershell -NoProfile -Command "if (!(Test-Path bin)) { New-Item -Path bin -ItemType Directory }"
+	RM := powershell -NoProfile -Command "if (Test-Path bin) { Remove-Item -Recurse -Force bin }"
+else
+	EXE :=
+	MKDIR := mkdir -p bin
+	RM := rm -rf bin
+endif
+
+.PHONY: help build test clean install mod-tidy
 
 .DEFAULT_GOAL := help
 
-help: ## Show this help
+help:
 	@echo "gonest-tools commands:"
 	@echo ""
 	@echo "  make build      # Build all tools to ./bin/"
 	@echo "  make test       # Test all tools"
-	@echo "  make install    # Install all tools to \$$GOPATH/bin"
+	@echo "  make install    # Install all tools to GOPATH/bin"
 	@echo "  make clean      # Clean build artifacts"
-	@echo ""
-	@echo "Individual tools:"
-	@echo "  make build-badge    # Build badge tool"
-	@echo "  make build-clean    # Build clean tool"
-	@echo "  make build-tag      # Build tag tool"
 
-build: ## Build all tools
-	@echo "Building all tools..."
-	@mkdir -p bin
-	@echo "Building badge..."
-	@cd badge && go build -o ../bin/gonest-badge
-	@echo "Building clean..."
-	@cd clean && go build -o ../bin/gonest-clean
-	@echo "Building tag..."
-	@cd tag && go build -o ../bin/gonest-tag
-	@echo "✓ All tools built in ./bin/"
+build: build-badge build-clean build-tag
+	@echo "All tools built in ./bin/"
 
-build-badge: ## Build badge tool
-	@mkdir -p bin
-	@cd badge && go build -o ../bin/gonest-badge
-	@echo "✓ gonest-badge built"
+build-badge:
+	@$(MKDIR)
+	@cd badge && go build -o ../bin/gonest-badge$(EXE)
+	@echo "gonest-badge built"
 
-build-clean: ## Build clean tool
-	@mkdir -p bin
-	@cd clean && go build -o ../bin/gonest-clean
-	@echo "✓ gonest-clean built"
+build-clean:
+	@$(MKDIR)
+	@cd clean && go build -o ../bin/gonest-clean$(EXE)
+	@echo "gonest-clean built"
 
-build-tag: ## Build tag tool
-	@mkdir -p bin
-	@cd tag && go build -o ../bin/gonest-tag
-	@echo "✓ gonest-tag built"
+build-tag:
+	@$(MKDIR)
+	@cd tag && go build -o ../bin/gonest-tag$(EXE)
+	@echo "gonest-tag built"
 
-test: ## Test all tools
-	@echo "Testing tag..."
+test:
 	@cd tag && go test -v ./...
-	@echo "✓ All tests passed!"
+	@echo "All tests passed"
 
-install: ## Install all tools
-	@echo "Installing badge..."
+install:
 	@cd badge && go install
-	@echo "Installing clean..."
 	@cd clean && go install
-	@echo "Installing tag..."
 	@cd tag && go install
-	@echo "✓ Tools installed to \$$GOPATH/bin"
+	@echo "Tools installed"
 
-clean: ## Clean build artifacts
-	@rm -rf bin/
-	@echo "✓ Cleaned!"
+clean:
+	@$(RM)
+	@echo "Cleaned"
 
-mod-tidy: ## Tidy all modules
-	@echo "Tidying badge..."
+mod-tidy:
 	@cd badge && go mod tidy
-	@echo "Tidying clean..."
 	@cd clean && go mod tidy
-	@echo "Tidying tag..."
 	@cd tag && go mod tidy
-	@echo "✓ All modules tidied"
+	@echo "All modules tidied"
