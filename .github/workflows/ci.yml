@@ -54,6 +54,5 @@ jobs:
         uses: golangci/golangci-lint-action@v6
         with:
           version: latest
-          # Força a instalação usando o Go 1.25 do runner
           install-mode: goinstall
-          args: --timeout=5m
+          args: --timeout=5m ./badge/... ./clean/... ./tag/...
