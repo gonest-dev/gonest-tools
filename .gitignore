@@ -22,3 +22,5 @@ Thumbs.db
 
 # Go workspace file (optional - some prefer to commit it)
 # go.work.sum
+
+__debug_bin.exe

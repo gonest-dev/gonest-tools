@@ -1,12 +1,11 @@
+# Go tools for cross-platform support
+MKDIR := go run ./mkdir/main.go
+RM    := go run ./clean/main.go
+
 ifeq ($(OS),Windows_NT)
 	EXE := .exe
-	# PowerShell é mais consistente no Windows do que comandos CMD
-	MKDIR := powershell -NoProfile -Command "if (!(Test-Path bin)) { New-Item -Path bin -ItemType Directory }"
-	RM := powershell -NoProfile -Command "if (Test-Path bin) { Remove-Item -Recurse -Force bin }"
 else
 	EXE :=
-	MKDIR := mkdir -p bin
-	RM := rm -rf bin
 endif
 
 .PHONY: help build test clean install mod-tidy
@@ -21,23 +20,28 @@ help:
 	@echo "  make install    # Install all tools to GOPATH/bin"
 	@echo "  make clean      # Clean build artifacts"
 
-build: build-badge build-clean build-tag
+build: build-badge build-clean build-tag build-mkdir
 	@echo "All tools built in ./bin/"
 
 build-badge:
-	@$(MKDIR)
+	@$(MKDIR) bin
 	@cd badge && go build -o ../bin/gonest-badge$(EXE)
 	@echo "gonest-badge built"
 
 build-clean:
-	@$(MKDIR)
+	@$(MKDIR) bin
 	@cd clean && go build -o ../bin/gonest-clean$(EXE)
 	@echo "gonest-clean built"
 
 build-tag:
-	@$(MKDIR)
+	@$(MKDIR) bin
 	@cd tag && go build -o ../bin/gonest-tag$(EXE)
 	@echo "gonest-tag built"
+
+build-mkdir:
+	@$(MKDIR) bin
+	@cd mkdir && go build -o ../bin/gonest-mkdir$(EXE)
+	@echo "gonest-mkdir built"
 
 test:
 	@cd tag && go test -v ./...
@@ -47,14 +51,16 @@ install:
 	@cd badge && go install
 	@cd clean && go install
 	@cd tag && go install
+	@cd mkdir && go install
 	@echo "Tools installed"
 
 clean:
-	@$(RM)
+	@$(RM) bin
 	@echo "Cleaned"
 
 mod-tidy:
 	@cd badge && go mod tidy
 	@cd clean && go mod tidy
 	@cd tag && go mod tidy
+	@cd mkdir && go mod tidy
 	@echo "All modules tidied"
