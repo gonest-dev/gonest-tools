@@ -144,6 +144,10 @@ func readModulesFromGoMod() []string {
 		// Skip hidden directories and _tools
 		if info.IsDir() {
 			name := info.Name()
+			// Don't skip the root directory itself
+			if path == "." {
+				return nil
+			}
 			if strings.HasPrefix(name, ".") || strings.HasPrefix(name, "_") {
 				return filepath.SkipDir
 			}
