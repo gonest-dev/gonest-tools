@@ -5,5 +5,5 @@ use (
 	./clean
 	./mkdir
 	./tag
-	./dev
+	./modules
 )
