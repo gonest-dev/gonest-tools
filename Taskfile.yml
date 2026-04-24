@@ -1,0 +1,41 @@
+version: "3"
+
+vars:
+  GO: go
+  LINT_TOOL: github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.5
+
+tasks:
+  default:
+    silent: true
+    cmds:
+      - task --list
+
+  build:
+    desc: Build binary
+    cmds:
+      - "{{.GO}} build -v ./..."
+
+  test:
+    desc: Run tests
+    cmds:
+      - "{{.GO}} test ./..."
+
+  lint:
+    desc: Run linter
+    cmds:
+      - "{{.GO}} run {{.LINT_TOOL}} run --timeout=5m ./..."
+
+  install:
+    desc: Install to GOPATH/bin
+    cmds:
+      - "{{.GO}} install ."
+
+  clean:
+    desc: Remove build artifacts
+    cmds:
+      - "{{.GO}} clean ./..."
+
+  mod-tidy:
+    desc: Tidy go.mod
+    cmds:
+      - "{{.GO}} mod tidy"

@@ -1,58 +1,46 @@
-name: gonest-tools-ci
+name: ci
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
+  pull_request:
+    branches: [main]
 
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Go
-        uses: actions/setup-go@v5
+      - uses: actions/setup-go@v5
         with:
-          go-version: "1.25"
+          go-version-file: go.mod
           cache: true
-          cache-dependency-path: go.work.sum
 
-      - name: Test tools
-        run: make test
+      - run: go test ./...
 
   build:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        tool: [badge, clean, tag]
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Go
-        uses: actions/setup-go@v5
+      - uses: actions/setup-go@v5
         with:
-          go-version: "1.25"
+          go-version-file: go.mod
+          cache: true
 
-      - name: Build ${{ matrix.tool }}
-        run: make build-${{ matrix.tool }}
+      - run: go build -v ./...
 
   lint:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Go
-        uses: actions/setup-go@v5
+      - uses: actions/setup-go@v5
         with:
-          go-version: "1.25"
+          go-version-file: go.mod
 
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v6
+      - uses: golangci/golangci-lint-action@v6
         with:
           version: latest
-          install-mode: goinstall
-          args: --timeout=5m ./badge/... ./clean/... ./tag/...
+          args: --timeout=5m ./...
