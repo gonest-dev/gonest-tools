@@ -1,5 +1,4 @@
-// _tools/badge/main.go
-package main
+package badge
 
 import (
 	"flag"
@@ -13,9 +12,9 @@ import (
 	"strings"
 )
 
-// totalCoverage runs 'go tool cover' on the provided profile path and returns
+// TotalCoverage runs 'go tool cover' on the provided profile path and returns
 // the coverage percentage as a string and a float64.
-func totalCoverage(profilePath string) (string, float64, error) {
+func TotalCoverage(profilePath string) (string, float64, error) {
 	cmd := exec.Command("go", "tool", "cover", "-func="+profilePath)
 	b, err := cmd.CombinedOutput()
 	if err != nil {
@@ -44,8 +43,8 @@ func totalCoverage(profilePath string) (string, float64, error) {
 	return raw, value, nil
 }
 
-// badgeColor returns a color name based on the coverage percentage.
-func badgeColor(p float64) string {
+// BadgeColor returns a color name based on the coverage percentage.
+func BadgeColor(p float64) string {
 	switch {
 	case p >= 90:
 		return "brightgreen"
@@ -62,8 +61,8 @@ func badgeColor(p float64) string {
 	}
 }
 
-// download fetches a URL and saves the response body to the specified filepath.
-func download(url, filepath string) error {
+// Download fetches a URL and saves the response body to the specified filepath.
+func Download(url, filepath string) error {
 	resp, err := http.Get(url)
 	fmt.Println("Downloading", url)
 	if err != nil {
@@ -86,37 +85,43 @@ func download(url, filepath string) error {
 	return err
 }
 
-// escape replaces special characters in a string to be used in a shields.io URL.
-func escape(s string) string {
+// Escape replaces special characters in a string to be used in a shields.io URL.
+func Escape(s string) string {
 	return strings.NewReplacer("-", "--", "_", "__", " ", "_").Replace(s)
 }
 
-// fail prints an error message to stderr and exits the program with status 1.
-func fail(err error) {
+// Fail prints an error message to stderr and exits the program with status 1.
+func Fail(err error) {
 	fmt.Fprintln(os.Stderr, err.Error())
 	os.Exit(1)
 }
 
-// main parses command line flags and generates the coverage badge.
-func main() {
+// ExecuteBadge parses command line flags and generates the coverage badge.
+func ExecuteBadge() {
+	args := os.Args[1:]
+	if len(args) < 2 {
+		fmt.Println("Usage: gonest-tools badge <pattern1> [pattern2] ...")
+		os.Exit(0)
+	}
+
 	in := flag.String("in", "coverage.out", "input coverage profile path")
 	out := flag.String("out", ".public/coverage.svg", "output badge SVG path")
 	label := flag.String("label", "coverage", "label for the badge")
 	flag.Parse()
 
-	percentText, percentValue, err := totalCoverage(*in)
+	percentText, percentValue, err := TotalCoverage(*in)
 	if err != nil {
-		fail(err)
+		Fail(err)
 	}
 
-	color := badgeColor(percentValue)
+	color := BadgeColor(percentValue)
 
 	if err := os.MkdirAll(filepath.Dir(*out), 0o755); err != nil {
-		fail(err)
+		Fail(err)
 	}
 
-	url := fmt.Sprintf("https://img.shields.io/badge/%s-%s%%25-%s.svg", escape(*label), escape(percentText), escape(color))
-	if err := download(url, *out); err != nil {
-		fail(err)
+	url := fmt.Sprintf("https://img.shields.io/badge/%s-%s%%25-%s.svg", Escape(*label), Escape(percentText), Escape(color))
+	if err := Download(url, *out); err != nil {
+		Fail(err)
 	}
 }

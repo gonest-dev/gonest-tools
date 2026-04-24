@@ -1,5 +1,4 @@
-// _tools/clean/main.go
-package main
+package clean
 
 import (
 	"fmt"
@@ -7,9 +6,9 @@ import (
 	"path/filepath"
 )
 
-func main() {
+func ExecuteClean() {
 	if len(os.Args) < 2 {
-		fmt.Println("Usage: go run _tools/clean <pattern1> [pattern2] ...")
+		fmt.Println("Usage: gonest-tools clean <pattern1> [pattern2] ...")
 		os.Exit(0)
 	}
 

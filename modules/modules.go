@@ -1,4 +1,4 @@
-package main
+package modules
 
 import (
 	"encoding/json"
@@ -14,7 +14,7 @@ type WorkJSON struct {
 	}
 }
 
-func main() {
+func ExecuteModules() {
 	cmd := exec.Command("go", "work", "edit", "-json")
 	out, err := cmd.Output()
 	if err != nil {
@@ -36,7 +36,10 @@ func main() {
 	var results []string
 	for _, u := range work.Use {
 		path := u.DiskPath
-		if !strings.HasPrefix(path, "./") && !strings.HasPrefix(path, "../") {
+		if strings.HasPrefix(path, "..") {
+			continue
+		}
+		if !strings.HasPrefix(path, "./") {
 			path = "./" + path
 		}
 

@@ -1,5 +1,4 @@
-// _tools/tag/main.go
-package main
+package tag
 
 import (
 	"flag"
@@ -12,89 +11,7 @@ import (
 	"sync"
 )
 
-func main() {
-	create := flag.Bool("create", false, "Create tags")
-	push := flag.Bool("push", false, "Push tags to remote")
-	delete := flag.Bool("delete", false, "Delete tags locally and remotely")
-	purge := flag.Bool("purge", false, "Delete all tags EXCEPT the ones for the specified version")
-	bump := flag.String("bump", "", "Bump version: 'minor' (2nd number) or 'patch' (3rd number)")
-	flag.Parse()
-
-	// If purge is specified
-	if *purge {
-		args := flag.Args()
-		if len(args) < 1 || args[0] == "" {
-			fmt.Println("Error: version to keep is required for --purge")
-			os.Exit(1)
-		}
-		purgeTags(args[0])
-		return
-	}
-
-	// If bump is specified, we need to infer the version from the latest git tag
-	var version string
-	var oldVersion string
-	if *bump != "" {
-		if *bump != "minor" && *bump != "patch" {
-			fmt.Println("Error: --bump must be 'minor' or 'patch'")
-			os.Exit(1)
-		}
-
-		latest := getLatestTag()
-		if latest == "" {
-			fmt.Println("Error: could not find any existing tags to bump from")
-			os.Exit(1)
-		}
-		oldVersion = latest
-		version = bumpVersion(latest, *bump)
-		fmt.Printf("Bumping version from %s to %s (level: %s)\n", oldVersion, version, *bump)
-
-		*create = true
-		*push = true
-		*delete = true
-	} else {
-		args := flag.Args()
-		if len(args) < 1 || args[0] == "" {
-			if !*create && !*push && !*delete {
-				fmt.Println("Usage: go run . [--bump minor|patch] | [--create|--push|--delete <version>]")
-				os.Exit(1)
-			}
-			fmt.Println("Error: version is required unless --bump is used")
-			os.Exit(1)
-		}
-		version = args[0]
-	}
-
-	modules := readModulesFromGoMod()
-
-	if len(modules) == 0 {
-		fmt.Println("Warning: no modules found")
-	}
-
-	// 1. Create new tags (if requested)
-	if *create {
-		createTags(version, modules)
-	}
-
-	// 2. Push new tags (if requested)
-	if *push {
-		pushTags(version, modules)
-	}
-
-	// 3. Delete old tags (if bumping, we delete the OLD version)
-	if *delete {
-		targetDeleteVersion := version
-		if *bump != "" {
-			targetDeleteVersion = oldVersion
-		}
-
-		if targetDeleteVersion != "" {
-			deleteTags(targetDeleteVersion, modules)
-		}
-	}
-}
-
-func getLatestTag() string {
+func GetLatestTag() string {
 	cmd := exec.Command("git", "describe", "--tags", "--abbrev=0")
 	out, err := cmd.Output()
 	if err != nil {
@@ -103,7 +20,7 @@ func getLatestTag() string {
 	return strings.TrimSpace(string(out))
 }
 
-func bumpVersion(ver, level string) string {
+func BumpVersion(ver, level string) string {
 	// Remove v prefix if exists
 	cleanVer := strings.TrimPrefix(ver, "v")
 
@@ -131,8 +48,8 @@ func bumpVersion(ver, level string) string {
 	return "v" + newVer
 }
 
-// readModulesFromGoMod reads subdirectories that contain go.mod files
-func readModulesFromGoMod() []string {
+// ReadModulesFromGoMod reads subdirectories that contain go.mod files
+func ReadModulesFromGoMod() []string {
 	var modules []string
 
 	// Walk the current directory
@@ -182,69 +99,69 @@ func readModulesFromGoMod() []string {
 	return modules
 }
 
-func createTags(version string, modules []string) {
-	if tagExists(version) {
+func CreateTags(version string, modules []string) {
+	if TagExists(version) {
 		fmt.Printf("Tag %s already exists for root, skipping creation.\n", version)
 	} else {
 		fmt.Printf("Creating tag %s for root...\n", version)
-		mustRun("git", "tag", version)
+		MustRun("git", "tag", version)
 	}
 
-	runParallel(modules, 5, func(mod string) {
+	RunParallel(modules, 5, func(mod string) {
 		tag := fmt.Sprintf("%s/%s", mod, version)
-		if tagExists(tag) {
+		if TagExists(tag) {
 			fmt.Printf("Tag %s already exists, skipping creation.\n", tag)
 			return
 		}
 		fmt.Printf("Creating tag %s...\n", tag)
-		mustRun("git", "tag", tag)
+		MustRun("git", "tag", tag)
 	})
 
 	fmt.Println("All tags creation processed.")
 }
 
-func tagExists(tag string) bool {
+func TagExists(tag string) bool {
 	cmd := exec.Command("git", "rev-parse", "--verify", "refs/tags/"+tag)
 	return cmd.Run() == nil
 }
 
-func pushTags(version string, modules []string) {
+func PushTags(version string, modules []string) {
 	fmt.Printf("Pushing tag %s...\n", version)
-	mustRun("git", "push", "origin", version)
+	MustRun("git", "push", "origin", version)
 
-	runParallel(modules, 5, func(mod string) {
+	RunParallel(modules, 5, func(mod string) {
 		tag := fmt.Sprintf("%s/%s", mod, version)
 		fmt.Printf("Pushing tag %s...\n", tag)
-		mustRun("git", "push", "origin", tag)
+		MustRun("git", "push", "origin", tag)
 	})
 
 	fmt.Println("All tags pushed successfully.")
 }
 
-func deleteTags(version string, modules []string) {
-	if tagExists(version) {
+func DeleteTags(version string, modules []string) {
+	if TagExists(version) {
 		fmt.Printf("Deleting tag %s...\n", version)
-		run("git", "tag", "-d", version)
+		Run("git", "tag", "-d", version)
 	} else {
 		fmt.Printf("Tag %s not found locally, skipping delete.\n", version)
 	}
-	run("git", "push", "origin", ":refs/tags/"+version)
+	Run("git", "push", "origin", ":refs/tags/"+version)
 
-	runParallel(modules, 5, func(mod string) {
+	RunParallel(modules, 5, func(mod string) {
 		tag := fmt.Sprintf("%s/%s", mod, version)
-		if tagExists(tag) {
+		if TagExists(tag) {
 			fmt.Printf("Deleting tag %s...\n", tag)
-			run("git", "tag", "-d", tag)
+			Run("git", "tag", "-d", tag)
 		} else {
 			fmt.Printf("Tag %s not found locally, skipping delete.\n", tag)
 		}
-		run("git", "push", "origin", ":refs/tags/"+tag)
+		Run("git", "push", "origin", ":refs/tags/"+tag)
 	})
 
 	fmt.Println("Tag deletion completed (some tags may not have existed).")
 }
 
-func purgeTags(version string) {
+func PurgeTags(version string) {
 	fmt.Printf("Purging all tags except version %s...\n", version)
 
 	cmd := exec.Command("git", "tag")
@@ -269,15 +186,15 @@ func purgeTags(version string) {
 
 		fmt.Printf("Purging tag: %s\n", tag)
 		// Delete locally
-		run("git", "tag", "-d", tag)
+		Run("git", "tag", "-d", tag)
 		// Delete remotely
-		run("git", "push", "origin", ":refs/tags/"+tag)
+		Run("git", "push", "origin", ":refs/tags/"+tag)
 	}
 
 	fmt.Println("Purge completed.")
 }
 
-func runParallel(modules []string, maxConcurrency int, fn func(string)) {
+func RunParallel(modules []string, maxConcurrency int, fn func(string)) {
 	var wg sync.WaitGroup
 	semaphore := make(chan struct{}, maxConcurrency)
 
@@ -294,17 +211,104 @@ func runParallel(modules []string, maxConcurrency int, fn func(string)) {
 	wg.Wait()
 }
 
-func run(name string, args ...string) {
+func Run(name string, args ...string) {
 	cmd := exec.Command(name, args...)
 	if err := cmd.Run(); err != nil {
 		fmt.Printf("Warning: command %s %v failed: %v\n", name, args, err)
 	}
 }
 
-func mustRun(name string, args ...string) {
+func MustRun(name string, args ...string) {
 	cmd := exec.Command(name, args...)
 	if err := cmd.Run(); err != nil {
 		fmt.Printf("Error running command %s %v: %v\n", name, args, err)
 		os.Exit(1)
+	}
+}
+
+func ExecuteTag() {
+	if len(os.Args) < 2 {
+		fmt.Println("Usage: gonest-tools tag <version>")
+		os.Exit(0)
+	}
+
+	create := flag.Bool("create", false, "Create tags")
+	push := flag.Bool("push", false, "Push tags to remote")
+	delete := flag.Bool("delete", false, "Delete tags locally and remotely")
+	purge := flag.Bool("purge", false, "Delete all tags EXCEPT the ones for the specified version")
+	bump := flag.String("bump", "", "Bump version: 'minor' (2nd number) or 'patch' (3rd number)")
+	flag.Parse()
+
+	// If purge is specified
+	if *purge {
+		args := flag.Args()
+		if len(args) < 1 || args[0] == "" {
+			fmt.Println("Error: version to keep is required for --purge")
+			os.Exit(1)
+		}
+		PurgeTags(args[0])
+		return
+	}
+
+	// If bump is specified, we need to infer the version from the latest git tag
+	var version string
+	var oldVersion string
+	if *bump != "" {
+		if *bump != "minor" && *bump != "patch" {
+			fmt.Println("Error: --bump must be 'minor' or 'patch'")
+			os.Exit(1)
+		}
+
+		latest := GetLatestTag()
+		if latest == "" {
+			fmt.Println("Error: could not find any existing tags to bump from")
+			os.Exit(1)
+		}
+		oldVersion = latest
+		version = BumpVersion(latest, *bump)
+		fmt.Printf("Bumping version from %s to %s (level: %s)\n", oldVersion, version, *bump)
+
+		*create = true
+		*push = true
+		*delete = true
+	} else {
+		args := flag.Args()
+		if len(args) < 1 || args[0] == "" {
+			if !*create && !*push && !*delete {
+				fmt.Println("Usage: go run . [--bump minor|patch] | [--create|--push|--delete <version>]")
+				os.Exit(1)
+			}
+			fmt.Println("Error: version is required unless --bump is used")
+			os.Exit(1)
+		}
+		version = args[0]
+	}
+
+	modules := ReadModulesFromGoMod()
+
+	if len(modules) == 0 {
+		fmt.Println("Warning: no modules found")
+	}
+
+	// 1. Create new tags (if requested)
+	if *create {
+		CreateTags(version, modules)
+	}
+
+	// 2. Push new tags (if requested)
+	if *push {
+		PushTags(version, modules)
+	}
+
+	// 3. Delete old tags (if bumping, we delete the OLD version)
+	if *delete {
+		targetDeleteVersion := version
+		if *bump != "" {
+			targetDeleteVersion = oldVersion
+		}
+
+		if targetDeleteVersion != "" {
+			DeleteTags(targetDeleteVersion, modules)
+		}
 	}
 }

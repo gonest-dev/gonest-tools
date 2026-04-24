@@ -1,6 +1,10 @@
-package main
+package tag_test
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/gonest-dev/gonest-tools/tag"
+)
 
 func TestBumpVersion(t *testing.T) {
 	tests := []struct {
@@ -21,9 +25,9 @@ func TestBumpVersion(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		got := bumpVersion(tt.version, tt.level)
+		got := tag.BumpVersion(tt.version, tt.level)
 		if got != tt.expected {
-			t.Errorf("bumpVersion(%q, %q) = %q; want %q", tt.version, tt.level, got, tt.expected)
+			t.Errorf("tag.BumpVersion(%q, %q) = %q; want %q", tt.version, tt.level, got, tt.expected)
 		}
 	}
 }

@@ -1,13 +1,13 @@
-package main
+package mkdir
 
 import (
 	"fmt"
 	"os"
 )
 
-func main() {
+func ExecuteMkdir() {
 	if len(os.Args) < 2 {
-		fmt.Println("Usage: mkdir <dir1> [dir2] ...")
+		fmt.Println("Usage: gonest-tools mkdir <dir1> [dir2] ...")
 		os.Exit(1)
 	}
 
